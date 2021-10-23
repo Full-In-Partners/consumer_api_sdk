@@ -62,7 +62,9 @@ if __name__ == "__main__":
         first_saved_search = saved_searches[0]
         # option 1:
         print("\n--- search with saved search query (first page) ---")
-        saved_searches_res1 = client.search(first_saved_search["query"])
+        saved_searches_res1 = client.search(
+            first_saved_search["query"], include_results=True, page=0, page_size=50
+        )
         companies = client.get_companies_by_ids(
             saved_searches_res1["results"], isURN=True
         )
