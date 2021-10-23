@@ -1,8 +1,66 @@
+from enum import Enum
+from urllib.parse import urlparse
+
 import requests
-import threading
 
 HARMONIC_CONSUMER_API_ENDPOINT = "https://api.harmonic.ai"
 HARMONIC_CONSUMER_API_ERROR_MSG = "error out unexpectedly. Please check your rate limit, timeout setting or contact us support@harmonic.ai"
+
+
+class COMPANY_CANONICAL_URL_TYPE(str, Enum):
+    LinkedinCompanyCanonical = "linkedin_url"
+    WebsiteCompanyCanonical = "website_url"
+    TwitterCompanyCanonical = "twitter_url"
+    CrunchbaseCompanyCanonical = "crunchbase_url"
+    PitchbookCompanyCanonical = "pitchbook_url"
+    InstagramCompanyCanonical = "instagram_url"
+    FacebookCompanyCanonical = "facebook_url"
+    AngellistCompanyCanonical = "angellist_url"
+    MonsterCompanyCanonical = "monster_url"
+    IndeedCompanyCanonical = "indeed_url"
+    StackoverflowCompanyCanonical = "stackoverflow_url"
+    GlassdoorCompanyCanonical = "glassdoor_url"
+    DomainCompanyCanonical = "website_domain"
+
+    @classmethod
+    def from_domain(cls, root_domain):
+        domain_map = {
+            "linkedin.com": COMPANY_CANONICAL_URL_TYPE.LinkedinCompanyCanonical,
+            "twitter.com": COMPANY_CANONICAL_URL_TYPE.TwitterCompanyCanonical,
+            "crunchbase.com": COMPANY_CANONICAL_URL_TYPE.CrunchbaseCompanyCanonical,
+            "pitchbook.com": COMPANY_CANONICAL_URL_TYPE.PitchbookCompanyCanonical,
+            "instagram.com": COMPANY_CANONICAL_URL_TYPE.InstagramCompanyCanonical,
+            "facebook.com": COMPANY_CANONICAL_URL_TYPE.FacebookCompanyCanonical,
+            "angel.co": COMPANY_CANONICAL_URL_TYPE.AngellistCompanyCanonical,
+            "monster.com": COMPANY_CANONICAL_URL_TYPE.MonsterCompanyCanonical,
+            "indeed.com": COMPANY_CANONICAL_URL_TYPE.IndeedCompanyCanonical,
+            "stackoverflow.com": COMPANY_CANONICAL_URL_TYPE.StackoverflowCompanyCanonical,
+            "glassdoor.com": COMPANY_CANONICAL_URL_TYPE.GlassdoorCompanyCanonical,
+        }
+        return domain_map.get(root_domain)
+
+
+class PERSON_CANONICAL_URL_TYPE(str, Enum):
+    LinkedinPersonCanonical = "linkedin_url"
+    TwitterPersonCanonical = "twitter_profile_url"
+    CrunchbasePersonCanonical = "crunchbase_profile_url"
+
+
+class HarmonicCompanyEnrichmentRequest:
+    def __init__(self, canonical_url_type, url):
+        self.canonical_url_type = canonical_url_type
+        self.url = url
+
+    @classmethod
+    def infer_from_url(cls, url):
+        parsed_uri = urlparse(url)
+        domain = "{uri.netloc}/".format(uri=parsed_uri)
+        root_domain = domain.replace("www.", "").rstrip("/")
+        url_type = COMPANY_CANONICAL_URL_TYPE.from_domain(root_domain)
+        return HarmonicCompanyEnrichmentRequest(url_type, url) if url_type else None
+
+    def to_dict(self):
+        return {self.canonical_url_type.value: self.url}
 
 
 class HarmonicClient:
@@ -10,9 +68,33 @@ class HarmonicClient:
         self.API_KEY = API_KEY
 
     # [ENRICH](https://console.harmonic.ai/docs/api-reference/enrich)
-    def enrich_company(self):
+    def enrich_company(self, url_or_enrichment_request):
         """[Enrich a company **POST**](https://console.harmonic.ai/docs/api-reference/enrich#enrich-a-company)"""
-        raise NotImplementedError
+        params = {"apikey": self.API_KEY}
+        if isinstance(url_or_enrichment_request, str):
+            enrichment_request = HarmonicCompanyEnrichmentRequest.infer_from_url(
+                url_or_enrichment_request
+            )
+            if not enrichment_request:
+                raise ValueError(
+                    "Not able to infer valid domain type from URL, try using HarmonicCompanyEnrichmentRequest(COMPANY_CANONICAL_URL_TYPE.WebsiteCompanyCanonical, YOUR_URL) as parameter"
+                )
+            params = {
+                **params,
+                **enrichment_request.to_dict(),
+            }
+        elif isinstance(url_or_enrichment_request, HarmonicCompanyEnrichmentRequest):
+            params = {**params, **url_or_enrichment_request.to_dict()}
+        else:
+            raise ValueError(
+                "Enrichment input has to be either url(str) or HarmonicCompanyEnrichmentRequest"
+            )
+        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/companies"
+        company = requests.post(
+            API_URL,
+            params=params,
+        ).json()
+        return company
 
     # [DISCOVER](https://console.harmonic.ai/docs/api-reference/discover#discover)
     def get_saved_searches(self):
@@ -70,7 +152,7 @@ class HarmonicClient:
             f"COMPLETE: search {saved_search_id} generated {total_result_count} results"
         )
 
-    def search(self, keywordsOrQuery, include_results=True, page=0, page_size=50):
+    def search(self, keywords_or_query, include_results=True, page=0, page_size=50):
         """[Conduct a search **POST**](https://console.harmonic.ai/docs/api-reference/discover#conduct-a-search)"""
         # search by keywords or api_query
         API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/search/companies"
@@ -81,14 +163,14 @@ class HarmonicClient:
             "page": page,
             "page_size": page_size,
         }
-        if isinstance(keywordsOrQuery, str):
-            body["keywords"] = keywordsOrQuery
-        elif isinstance(keywordsOrQuery, dict):
-            if not keywordsOrQuery.get("pagination"):
-                keywordsOrQuery["pagination"] = {}
-            keywordsOrQuery["pagination"]["start"] = page * page_size
-            keywordsOrQuery["pagination"]["page_size"] = page_size
-            body["query"] = keywordsOrQuery
+        if isinstance(keywords_or_query, str):
+            body["keywords"] = keywords_or_query
+        elif isinstance(keywords_or_query, dict):
+            if not keywords_or_query.get("pagination"):
+                keywords_or_query["pagination"] = {}
+            keywords_or_query["pagination"]["start"] = page * page_size
+            keywords_or_query["pagination"]["page_size"] = page_size
+            body["query"] = keywords_or_query
         else:
             raise ValueError("Search input has to be keywords(str) or query(dict)")
 
