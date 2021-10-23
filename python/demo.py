@@ -1,6 +1,33 @@
 from harmonic.api import HarmonicClient
 import argparse
 
+
+def company_summary(company, client):
+    summary_template = """
+    company: {}
+        website: {}
+        headcount: {}
+        funding_stage:{}
+        investors: {}
+        people: {}
+    """
+    name = company["name"]
+    website = company["website"]["domain"]
+    headcount = company["headcount"]
+    funding_stage = company["funding"]["funding_stage"]
+    investors = [investor["name"] for investor in company["funding"]["investors"]]
+    people_full = client.get_persons_by_id(
+        [bio["person"] for bio in company["people"]], isURN=True
+    )
+    people = [
+        (person["full_name"], person["socials"]["LINKEDIN"]["url"])
+        for person in people_full
+    ]
+    return summary_template.format(
+        name, website, headcount, funding_stage, investors, people
+    )
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apikey", type=str, required=True, help="HARMONIC API KEY")
@@ -10,7 +37,7 @@ if __name__ == "__main__":
 
     # search companies with keywords
     print("----- KEWORDS SEARCH -----")
-    keywords = "San Francisco machine learning sequoia capital"
+    keywords = "San Francisco machine learning sequoia"
     keyword_serach_res = client.search(
         keywords,
         include_results=True,
@@ -20,8 +47,9 @@ if __name__ == "__main__":
     print(f"keywords: {keywords}")
     print(f"total: {keyword_serach_res['count']}")
     companies = client.get_companies_by_ids(keyword_serach_res["results"], isURN=True)
-    print("first 10 matched company domains")
-    print(f"{[company['website']['domain'] for company in companies]}")
+    print("first page matched company summaries")
+    for company in companies:
+        print(company_summary(company, client))
 
     # show my saved searches
     print("----- SAVED SEARCHES -----")
@@ -33,7 +61,7 @@ if __name__ == "__main__":
     if len(saved_searches) > 0:
         first_saved_search = saved_searches[0]
         # option 1:
-        print("--- search with saved search query (first page) ---")
+        print("\n--- search with saved search query (first page) ---")
         saved_searches_res1 = client.search(first_saved_search["query"])
         companies = client.get_companies_by_ids(
             saved_searches_res1["results"], isURN=True
@@ -41,7 +69,7 @@ if __name__ == "__main__":
         print(f"{first_saved_search['name']}: first page matched company domains")
         print(f"{[company['website']['domain'] for company in companies]}")
         # option 2:
-        print("--- search with saved search id (streaming all) ---")
+        print("\n--- search with saved search id (streaming all) ---")
         companies = []
         saved_searches_res2 = client.get_saved_search_results(
             first_saved_search["entity_urn"],

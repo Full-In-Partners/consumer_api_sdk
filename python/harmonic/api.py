@@ -120,11 +120,11 @@ class HarmonicClient:
         person = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return person
 
-    def get_persons_by_id(self, ids):
+    def get_persons_by_id(self, ids, isURN=False):
         """[Get persons by ID **GET](https://console.harmonic.ai/docs/api-reference/fetch#get-persons-by-id)"""
         API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/persons"
         persons = requests.get(
-            API_URL, params={"ids": ids, "apikey": self.API_KEY}
+            API_URL, params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY}
         ).json()
         return persons
 
