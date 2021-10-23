@@ -33,7 +33,7 @@ class HarmonicClient:
         return saved_searches
 
     def get_saved_search_results(
-        self, saved_search_id, process_record=None, page_size=100
+        self, saved_search_id, record_processor=None, page_size=100
     ):
         """[Get saved search results **GET**](https://console.harmonic.ai/docs/api-reference/discover#get-saved-search-results)"""
         API_URL = (
@@ -43,23 +43,25 @@ class HarmonicClient:
         total_result_count = 0
         page_result_count = 0
         page = 0
-        while True:
+        page_error_count = 0
+        while page_error_count < 5:  # stop streaming if errors out too many times
             try:
                 res = requests.get(
-                    API_URL % page,
+                    API_URL,
                     params={"page": page, "size": page_size, "apikey": self.API_KEY},
                 ).json()
                 page_result_count = len(res["results"])
 
-                PAGE_INFO = f"page {page}: {page_result_count} results {'(some results might get merged or deleted)' if page_result_count < PAGE_SIZE else ''}"
+                PAGE_INFO = f"page {page}: {page_result_count} results {'(some results might get merged or deleted)' if page_result_count < page_size else ''}"
                 print(PAGE_INFO if page_result_count > 0 else "END")
                 if page_result_count == 0:
                     break
 
                 for record in res["results"]:
-                    if process_record and callable(process_record):
-                        process_record(record)
-            except Exception:
+                    if record_processor and callable(record_processor):
+                        record_processor(record)
+            except requests.exceptions.RequestException:
+                page_error_count += 1
                 print(f"page {page}: {HARMONIC_CONSUMER_API_ERROR_MSG}")
             total_result_count += page_result_count
             page += 1
@@ -82,6 +84,10 @@ class HarmonicClient:
         if isinstance(keywordsOrQuery, str):
             body["keywords"] = keywordsOrQuery
         elif isinstance(keywordsOrQuery, dict):
+            if not keywordsOrQuery.get("pagination"):
+                keywordsOrQuery["pagination"] = {}
+            keywordsOrQuery["pagination"]["start"] = page * page_size
+            keywordsOrQuery["pagination"]["page_size"] = page_size
             body["query"] = keywordsOrQuery
         else:
             raise ValueError("Search input has to be keywords(str) or query(dict)")
@@ -93,10 +99,6 @@ class HarmonicClient:
         ).json()
         return company
 
-    def save_search(self):
-        """[Save a search **POST](https://console.harmonic.ai/docs/api-reference/discover#save-a-search)"""
-        raise NotImplementedError
-
     # [FETCH](https://console.harmonic.ai/docs/api-reference/fetch#fetch)
     def get_company_by_id(self, id):
         """[Get company by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-company-by-id)"""
@@ -104,11 +106,11 @@ class HarmonicClient:
         company = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return company
 
-    def get_companies_by_ids(self, ids):
+    def get_companies_by_ids(self, ids, isURN=False):
         """[Get companies by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-companies-by-id)"""
         API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/companies"
         companies = requests.get(
-            API_URL, params={"ids": ids, "apikey": self.API_KEY}
+            API_URL, params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY}
         ).json()
         return companies
 
