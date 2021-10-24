@@ -1,4 +1,5 @@
 from enum import Enum
+import json
 from urllib.parse import urlparse
 
 import requests
@@ -211,22 +212,80 @@ class HarmonicClient:
         return persons
 
     # [WATCHLIST](https://console.harmonic.ai/docs/api-reference/watchlist#watchlist)
-    def set_watchlist(self, name, companies, shared_with_team):
+    def set_watchlist(
+        self,
+        watchlist_id,
+        name=None,
+        creator=None,
+        shared_with_team=None,
+        companies=None,
+    ):
         """[Modify a Watchlist **PUT**](https://console.harmonic.ai/docs/api-reference/watchlist#modify-company-watchlist)"""
-        raise NotImplementedError
+        API_URL = (
+            f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}"
+        )
+        wl = self.get_watchlist_by_id(watchlist_id)
+        body = {
+            "name": wl["name"],
+            "creator": wl["creator"],
+            "shared_with_team": wl["shared_with_team"],
+            "companies": [c["entity_urn"] for c in wl["companies"]],
+        }
+        if name is not None and isinstance(name, str):
+            body["name"] = name
+        if creator is not None and isinstance(creator, str):
+            body["creator"] = creator
+        if shared_with_team is not None and isinstance(shared_with_team, bool):
+            body["shared_with_team"] = shared_with_team
+        if companies is not None and isinstance(companies, list):
+            body["companies"] = companies
+        res = requests.put(
+            API_URL,
+            params={"apikey": self.API_KEY},
+            json=body,
+        ).json()
+        return res
 
-    def delete_watchlist(self):
+    def delete_watchlist(self, watchlist_id):
         """[Delete a Watchlist **DELETE**](https://console.harmonic.ai/docs/api-reference/watchlist#delete-company-watchlist)"""
-        raise NotImplementedError
+        API_URL = (
+            f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}"
+        )
+        res = requests.delete(
+            API_URL,
+            params={"apikey": self.API_KEY},
+        ).json()
+        return res
 
-    def get_watchlist(self):
+    def get_watchlists(self):
+        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies"
+        watchlists = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
+        return watchlists
+
+    def get_watchlist_by_id(self, watchlist_id):
         """[Get Company Watchlist **GET**](https://console.harmonic.ai/docs/api-reference/watchlist#get-company-watchlist)"""
-        raise NotImplementedError
+        API_URL = (
+            f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}"
+        )
+        watchlist = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
+        return watchlist
 
-    def add_company_to_watchlist(self):
+    def add_company_to_watchlist(self, watchlist_id, company_ids, isURN=False):
         """[Add Companies to Watchlist **POST**](https://console.harmonic.ai/docs/api-reference/watchlist#add-companies-to-watchlist)"""
-        raise NotImplementedError
+        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}:addCompanies"
+        res = requests.post(
+            API_URL,
+            params={"apikey": self.API_KEY},
+            json={("urns" if isURN else "ids"): company_ids},
+        ).json()
+        return res
 
-    def remove_company_from_watchlist(self):
+    def remove_company_from_watchlist(self, watchlist_id, company_ids, isURN=False):
         """[Remove Companies from Watchlist **POST**](https://console.harmonic.ai/docs/api-reference/watchlist#remove-companies-from-watchlist)"""
-        raise NotImplementedError
+        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}:removeCompanies"
+        res = requests.post(
+            API_URL,
+            params={"apikey": self.API_KEY},
+            json={("urns" if isURN else "ids"): company_ids},
+        ).json()
+        return res

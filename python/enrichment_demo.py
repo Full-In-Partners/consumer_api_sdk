@@ -7,7 +7,7 @@ from harmonic.api import (
 )
 
 
-def company_summary(company, client):
+def company_summary(company):
     summary_template = """
     company: {}
         website: {}
@@ -42,7 +42,7 @@ if __name__ == "__main__":
             website,
         )
     )
-    print(company_summary(company, client))
+    print(company_summary(company))
     # option 2
     print("\nrequest with company social URLs")
     for url in [
@@ -55,4 +55,4 @@ if __name__ == "__main__":
     ]:
         print(f"{url}")
         company = client.enrich_company(url)
-        print(company_summary(company, client))
+        print(company_summary(company))
