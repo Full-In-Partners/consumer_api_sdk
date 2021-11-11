@@ -6,6 +6,8 @@ import requests
 
 HARMONIC_CONSUMER_API_ENDPOINT = "https://api.harmonic.ai"
 HARMONIC_CONSUMER_API_ERROR_MSG = "error out unexpectedly. Please check your rate limit, timeout setting or contact us support@harmonic.ai"
+HARMONIC_CONSUMER_API_RETRYING_MSG = "something is wrong, retrying..."
+HARMONIC_CONSUMER_API_MAX_RETRY_COUNT = 5
 
 
 class COMPANY_CANONICAL_URL_TYPE(str, Enum):
@@ -67,6 +69,13 @@ class HarmonicCompanyEnrichmentRequest:
 class HarmonicClient:
     def __init__(self, API_KEY):
         self.API_KEY = API_KEY
+        self._set_api_endpoint()
+
+    def _set_api_endpoint(self, api_endpoint=None):
+        if api_endpoint:
+            self.API_ENDPOINT = api_endpoint
+        else:
+            self.API_ENDPOINT = HARMONIC_CONSUMER_API_ENDPOINT
 
     # [ENRICH](https://console.harmonic.ai/docs/api-reference/enrich)
     def enrich_company(self, url_or_enrichment_request):
@@ -90,7 +99,7 @@ class HarmonicClient:
             raise ValueError(
                 "Enrichment input has to be either url(str) or HarmonicCompanyEnrichmentRequest"
             )
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/companies"
+        API_URL = f"{self.API_ENDPOINT}/companies"
         company = requests.post(
             API_URL,
             params=params,
@@ -100,7 +109,7 @@ class HarmonicClient:
     # [DISCOVER](https://console.harmonic.ai/docs/api-reference/discover#discover)
     def get_saved_searches(self):
         """[Get saved searches **GET**](https://console.harmonic.ai/docs/api-reference/discover#get-saved-searches)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/savedSearches"
+        API_URL = f"{self.API_ENDPOINT}/savedSearches"
         saved_searches = requests.get(
             API_URL,
             params={"apikey": self.API_KEY},
@@ -108,7 +117,7 @@ class HarmonicClient:
         return saved_searches
 
     def get_saved_searches_by_owner(self):
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/saved_searches"
+        API_URL = f"{self.API_ENDPOINT}/saved_searches"
         saved_searches = requests.get(
             API_URL,
             params={"apikey": self.API_KEY},
@@ -119,22 +128,27 @@ class HarmonicClient:
         self, saved_search_id, record_processor=None, page_size=100
     ):
         """[Get saved search results **GET**](https://console.harmonic.ai/docs/api-reference/discover#get-saved-search-results)"""
-        API_URL = (
-            f"{HARMONIC_CONSUMER_API_ENDPOINT}/saved_searches:results/{saved_search_id}"
-        )
-
+        API_URL = f"{self.API_ENDPOINT}/saved_searches:results/{saved_search_id}"
         total_result_count = 0
         page_result_count = 0
         page = 0
         page_error_count = 0
-        while page_error_count < 5:  # stop streaming if errors out too many times
+        while (
+            page_error_count < HARMONIC_CONSUMER_API_MAX_RETRY_COUNT
+        ):  # stop streaming if errors out too many times
             try:
                 res = requests.get(
                     API_URL,
                     params={"page": page, "size": page_size, "apikey": self.API_KEY},
-                ).json()
-                page_result_count = len(res["results"])
+                )
+                if res.status_code != 200:
+                    page_error_count += 1
+                    print(f"page {page}: {HARMONIC_CONSUMER_API_RETRYING_MSG}")
+                    print(f"{res.json()}")
+                    continue
 
+                res = res.json()
+                page_result_count = len(res["results"])
                 PAGE_INFO = f"page {page}: {page_result_count} results {'(some results might get merged or deleted)' if page_result_count < page_size else ''}"
                 print(PAGE_INFO if page_result_count > 0 else "END")
                 if page_result_count == 0:
@@ -145,18 +159,25 @@ class HarmonicClient:
                         record_processor(record)
             except requests.exceptions.RequestException:
                 page_error_count += 1
-                print(f"page {page}: {HARMONIC_CONSUMER_API_ERROR_MSG}")
+                if page_error_count == HARMONIC_CONSUMER_API_MAX_RETRY_COUNT:
+                    print(f"page {page}: {HARMONIC_CONSUMER_API_ERROR_MSG}")
+                    break
+                else:
+                    print(f"page {page}: {HARMONIC_CONSUMER_API_RETRYING_MSG}")
+                    continue
+
             total_result_count += page_result_count
             page += 1
 
-        print(
-            f"COMPLETE: search {saved_search_id} generated {total_result_count} results"
-        )
+        if page_error_count < HARMONIC_CONSUMER_API_MAX_RETRY_COUNT:
+            print(
+                f"COMPLETE: search {saved_search_id} generated {total_result_count} results"
+            )
 
     def search(self, keywords_or_query, include_results=True, page=0, page_size=50):
         """[Conduct a search **POST**](https://console.harmonic.ai/docs/api-reference/discover#conduct-a-search)"""
         # search by keywords or api_query
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/search/companies"
+        API_URL = f"{self.API_ENDPOINT}/search/companies"
         body = {
             "type": "COMPANIES_LIST",
             "include_count": True,
@@ -185,13 +206,13 @@ class HarmonicClient:
     # [FETCH](https://console.harmonic.ai/docs/api-reference/fetch#fetch)
     def get_company_by_id(self, id):
         """[Get company by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-company-by-id)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/companies/{id}"
+        API_URL = f"{self.API_ENDPOINT}/companies/{id}"
         company = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return company
 
     def get_companies_by_ids(self, ids, isURN=False):
         """[Get companies by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-companies-by-id)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/companies"
+        API_URL = f"{self.API_ENDPOINT}/companies"
         companies = requests.get(
             API_URL, params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY}
         ).json()
@@ -199,13 +220,13 @@ class HarmonicClient:
 
     def get_person_by_id(self, id):
         """[Get person by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-person-by-id)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/persons/{id}"
+        API_URL = f"{self.API_ENDPOINT}/persons/{id}"
         person = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return person
 
     def get_persons_by_id(self, ids, isURN=False):
         """[Get persons by ID **GET](https://console.harmonic.ai/docs/api-reference/fetch#get-persons-by-id)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/persons"
+        API_URL = f"{self.API_ENDPOINT}/persons"
         persons = requests.get(
             API_URL, params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY}
         ).json()
@@ -221,9 +242,7 @@ class HarmonicClient:
         companies=None,
     ):
         """[Modify a Watchlist **PUT**](https://console.harmonic.ai/docs/api-reference/watchlist#modify-company-watchlist)"""
-        API_URL = (
-            f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}"
-        )
+        API_URL = f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}"
         wl = self.get_watchlist_by_id(watchlist_id)
         body = {
             "name": wl["name"],
@@ -248,9 +267,7 @@ class HarmonicClient:
 
     def delete_watchlist(self, watchlist_id):
         """[Delete a Watchlist **DELETE**](https://console.harmonic.ai/docs/api-reference/watchlist#delete-company-watchlist)"""
-        API_URL = (
-            f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}"
-        )
+        API_URL = f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}"
         res = requests.delete(
             API_URL,
             params={"apikey": self.API_KEY},
@@ -258,21 +275,22 @@ class HarmonicClient:
         return res
 
     def get_watchlists(self):
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies"
+        API_URL = f"{self.API_ENDPOINT}/watchlists/companies"
+        print(API_URL)
         watchlists = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return watchlists
 
     def get_watchlist_by_id(self, watchlist_id):
         """[Get Company Watchlist **GET**](https://console.harmonic.ai/docs/api-reference/watchlist#get-company-watchlist)"""
-        API_URL = (
-            f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}"
-        )
+        API_URL = f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}"
         watchlist = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return watchlist
 
     def add_company_to_watchlist(self, watchlist_id, company_ids, isURN=False):
         """[Add Companies to Watchlist **POST**](https://console.harmonic.ai/docs/api-reference/watchlist#add-companies-to-watchlist)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}:addCompanies"
+        API_URL = (
+            f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}:addCompanies"
+        )
         res = requests.post(
             API_URL,
             params={"apikey": self.API_KEY},
@@ -282,7 +300,9 @@ class HarmonicClient:
 
     def remove_company_from_watchlist(self, watchlist_id, company_ids, isURN=False):
         """[Remove Companies from Watchlist **POST**](https://console.harmonic.ai/docs/api-reference/watchlist#remove-companies-from-watchlist)"""
-        API_URL = f"{HARMONIC_CONSUMER_API_ENDPOINT}/watchlists/companies/{watchlist_id}:removeCompanies"
+        API_URL = (
+            f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}:removeCompanies"
+        )
         res = requests.post(
             API_URL,
             params={"apikey": self.API_KEY},
