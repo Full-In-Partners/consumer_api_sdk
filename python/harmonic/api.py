@@ -137,17 +137,24 @@ class HarmonicClient:
             page_error_count < HARMONIC_CONSUMER_API_MAX_RETRY_COUNT
         ):  # stop streaming if errors out too many times
             try:
-                res = requests.get(
+                data = b""
+                with requests.get(
                     API_URL,
                     params={"page": page, "size": page_size, "apikey": self.API_KEY},
-                )
-                if res.status_code != 200:
-                    page_error_count += 1
-                    print(f"page {page}: {HARMONIC_CONSUMER_API_RETRYING_MSG}")
-                    print(f"{res.json()}")
-                    continue
+                    stream=True,
+                ) as response:
+                    if response.status_code != 200:
+                        page_error_count += 1
+                        print(f"page {page}: {HARMONIC_CONSUMER_API_RETRYING_MSG}")
+                        print(f"{response.json()}")
+                        continue
+                    for chunk in response.iter_content(
+                        chunk_size=10 * 1024 * 1024
+                    ):  # 10MB
+                        if chunk:  # filter out keep-alive new chunks
+                            data += chunk
 
-                res = res.json()
+                res = json.loads(data)
                 page_result_count = len(res["results"])
                 PAGE_INFO = f"page {page}: {page_result_count} results {'(some results might get merged or deleted)' if page_result_count < page_size else ''}"
                 print(PAGE_INFO if page_result_count > 0 else "END")
