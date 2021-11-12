@@ -5,8 +5,9 @@ from urllib.parse import urlparse
 import requests
 
 HARMONIC_CONSUMER_API_ENDPOINT = "https://api.harmonic.ai"
-HARMONIC_CONSUMER_API_ERROR_MSG = "error out unexpectedly. Please check your rate limit, timeout setting or contact us support@harmonic.ai"
-HARMONIC_CONSUMER_API_RETRYING_MSG = "something is wrong, retrying..."
+HARMONIC_CONSUMER_API_ERROR_MSG = "Error out unexpectedly. Please check your rate limit, timeout setting or contact us support@harmonic.ai"
+HARMONIC_CONSUMER_API_INTERNAL_ERROR_MSG = "Our service is having some issues"
+HARMONIC_CONSUMER_API_RETRYING_MSG = "Something is wrong, retrying..."
 HARMONIC_CONSUMER_API_MAX_RETRY_COUNT = 5
 
 
@@ -146,7 +147,10 @@ class HarmonicClient:
                     if response.status_code != 200:
                         page_error_count += 1
                         print(f"page {page}: {HARMONIC_CONSUMER_API_RETRYING_MSG}")
-                        print(f"{response.json()}")
+                        if response.status_code == 500:
+                            print(HARMONIC_CONSUMER_API_INTERNAL_ERROR_MSG)
+                        else:
+                            print(f"{response.json()}")
                         continue
                     for chunk in response.iter_content(
                         chunk_size=10 * 1024 * 1024
