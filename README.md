@@ -12,6 +12,6 @@ python3 demo.py
 ```
 #### from pip package
 ```
-pip3 install git+https://github.com:harmonicai/consumer_api_sdk.git
+pip3 install git+https://github.com/harmonicai/consumer_api_sdk.git
 ```
 
