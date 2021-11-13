@@ -1,6 +1,6 @@
 import setuptools
 
-with open("../README.md", "r") as fh:
+with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
@@ -12,6 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/harmonicai/consumer_api_sdk.git",
+    install_requires=["requests"],
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
