@@ -1,8 +1,9 @@
-from enum import Enum
 import json
+from enum import Enum
 from urllib.parse import urlparse
 
 import requests
+from requests.api import request
 
 HARMONIC_CONSUMER_API_ENDPOINT = "https://api.harmonic.ai"
 HARMONIC_CONSUMER_API_ERROR_MSG = "Error out unexpectedly. Please check your rate limit, timeout setting or contact us support@harmonic.ai"
@@ -78,6 +79,15 @@ class HarmonicClient:
         else:
             self.API_ENDPOINT = HARMONIC_CONSUMER_API_ENDPOINT
 
+    def _request(self, method, url, params=None, json=None):
+        res = request(method, url, params=params, json=json, data=None)
+        if res.status_code == 200:
+            return res.json()
+        elif res.status_code == 500:
+            raise Exception(f"{HARMONIC_CONSUMER_API_INTERNAL_ERROR_MSG}\n{url}")
+        else:
+            raise Exception(f"{res.json()}\n{url}")
+
     # [ENRICH](https://console.harmonic.ai/docs/api-reference/enrich)
     def enrich_company(self, url_or_enrichment_request):
         """[Enrich a company **POST**](https://console.harmonic.ai/docs/api-reference/enrich#enrich-a-company)"""
@@ -101,28 +111,20 @@ class HarmonicClient:
                 "Enrichment input has to be either url(str) or HarmonicCompanyEnrichmentRequest"
             )
         API_URL = f"{self.API_ENDPOINT}/companies"
-        company = requests.post(
-            API_URL,
-            params=params,
-        ).json()
+        company = self._request("post", API_URL, params=params)
+
         return company
 
     # [DISCOVER](https://console.harmonic.ai/docs/api-reference/discover#discover)
     def get_saved_searches(self):
         """[Get saved searches **GET**](https://console.harmonic.ai/docs/api-reference/discover#get-saved-searches)"""
         API_URL = f"{self.API_ENDPOINT}/savedSearches"
-        saved_searches = requests.get(
-            API_URL,
-            params={"apikey": self.API_KEY},
-        ).json()
+        saved_searches = self._request("get", API_URL, params={"apikey": self.API_KEY})
         return saved_searches
 
     def get_saved_searches_by_owner(self):
         API_URL = f"{self.API_ENDPOINT}/saved_searches"
-        saved_searches = requests.get(
-            API_URL,
-            params={"apikey": self.API_KEY},
-        ).json()
+        saved_searches = self._request("get", API_URL, params={"apikey": self.API_KEY})
         return saved_searches
 
     def get_saved_search_results(
@@ -209,40 +211,42 @@ class HarmonicClient:
             body["query"] = keywords_or_query
         else:
             raise ValueError("Search input has to be keywords(str) or query(dict)")
-        company = requests.post(
-            API_URL,
-            params={"apikey": self.API_KEY},
-            json=body,
-        ).json()
+        company = self._request(
+            "post", API_URL, params={"apikey": self.API_KEY}, json=body
+        )
         return company
 
     # [FETCH](https://console.harmonic.ai/docs/api-reference/fetch#fetch)
     def get_company_by_id(self, id):
         """[Get company by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-company-by-id)"""
         API_URL = f"{self.API_ENDPOINT}/companies/{id}"
-        company = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
+        company = self._request("get", API_URL, params={"apikey": self.API_KEY})
         return company
 
     def get_companies_by_ids(self, ids, isURN=False):
         """[Get companies by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-companies-by-id)"""
         API_URL = f"{self.API_ENDPOINT}/companies"
-        companies = requests.get(
-            API_URL, params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY}
-        ).json()
+        companies = self._request(
+            "get",
+            API_URL,
+            params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY},
+        )
         return companies
 
     def get_person_by_id(self, id):
         """[Get person by ID **GET**](https://console.harmonic.ai/docs/api-reference/fetch#get-person-by-id)"""
         API_URL = f"{self.API_ENDPOINT}/persons/{id}"
-        person = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
+        person = self._request("get", API_URL, params={"apikey": self.API_KEY})
         return person
 
     def get_persons_by_ids(self, ids, isURN=False):
         """[Get persons by ID **GET](https://console.harmonic.ai/docs/api-reference/fetch#get-persons-by-id)"""
         API_URL = f"{self.API_ENDPOINT}/persons"
-        persons = requests.get(
-            API_URL, params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY}
-        ).json()
+        persons = self._request(
+            "get",
+            API_URL,
+            params={("urns" if isURN else "ids"): ids, "apikey": self.API_KEY},
+        )
         return persons
 
     # [WATCHLIST](https://console.harmonic.ai/docs/api-reference/watchlist#watchlist)
@@ -250,8 +254,6 @@ class HarmonicClient:
         self,
         watchlist_id,
         name=None,
-        creator=None,
-        shared_with_team=None,
         companies=None,
     ):
         """[Modify a Watchlist **PUT**](https://console.harmonic.ai/docs/api-reference/watchlist#modify-company-watchlist)"""
@@ -259,44 +261,30 @@ class HarmonicClient:
         wl = self.get_watchlist_by_id(watchlist_id)
         body = {
             "name": wl["name"],
-            "creator": wl["creator"],
-            "shared_with_team": wl["shared_with_team"],
             "companies": [c["entity_urn"] for c in wl["companies"]],
         }
         if name is not None and isinstance(name, str):
             body["name"] = name
-        if creator is not None and isinstance(creator, str):
-            body["creator"] = creator
-        if shared_with_team is not None and isinstance(shared_with_team, bool):
-            body["shared_with_team"] = shared_with_team
         if companies is not None and isinstance(companies, list):
             body["companies"] = companies
-        res = requests.put(
-            API_URL,
-            params={"apikey": self.API_KEY},
-            json=body,
-        ).json()
+        res = self._request("put", API_URL, params={"apikey": self.API_KEY}, json=body)
         return res
 
     def delete_watchlist(self, watchlist_id):
         """[Delete a Watchlist **DELETE**](https://console.harmonic.ai/docs/api-reference/watchlist#delete-company-watchlist)"""
         API_URL = f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}"
-        res = requests.delete(
-            API_URL,
-            params={"apikey": self.API_KEY},
-        ).json()
+        res = self._request("delete", API_URL, params={"apikey": self.API_KEY})
         return res
 
     def get_watchlists(self):
         API_URL = f"{self.API_ENDPOINT}/watchlists/companies"
-        print(API_URL)
-        watchlists = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
+        watchlists = self._request("get", API_URL, params={"apikey": self.API_KEY})
         return watchlists
 
     def get_watchlist_by_id(self, watchlist_id):
         """[Get Company Watchlist **GET**](https://console.harmonic.ai/docs/api-reference/watchlist#get-company-watchlist)"""
         API_URL = f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}"
-        watchlist = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
+        watchlist = self._request("get", API_URL, params={"apikey": self.API_KEY})
         return watchlist
 
     def add_company_to_watchlist(self, watchlist_id, company_ids, isURN=False):
@@ -304,11 +292,12 @@ class HarmonicClient:
         API_URL = (
             f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}:addCompanies"
         )
-        res = requests.post(
+        res = self._request(
+            "post",
             API_URL,
             params={"apikey": self.API_KEY},
             json={("urns" if isURN else "ids"): company_ids},
-        ).json()
+        )
         return res
 
     def remove_company_from_watchlist(self, watchlist_id, company_ids, isURN=False):
@@ -316,9 +305,10 @@ class HarmonicClient:
         API_URL = (
             f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}:removeCompanies"
         )
-        res = requests.post(
+        res = self._request(
+            "post",
             API_URL,
             params={"apikey": self.API_KEY},
             json={("urns" if isURN else "ids"): company_ids},
-        ).json()
+        )
         return res

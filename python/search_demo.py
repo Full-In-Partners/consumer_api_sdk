@@ -16,7 +16,7 @@ def company_summary(company, client):
     headcount = company["headcount"]
     funding_stage = company["funding"]["funding_stage"]
     investors = [investor["name"] for investor in company["funding"]["investors"]]
-    people_full = client.get_persons_by_id(
+    people_full = client.get_persons_by_ids(
         [bio["person"] for bio in company["people"]], isURN=True
     )
     people = [
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         print("\n--- search with saved search id (streaming all) ---")
         companies = []
         saved_searches_res2 = client.get_saved_search_results(
-            save_search_id=first_saved_search["entity_urn"],
+            first_saved_search["entity_urn"],
             record_processor=(lambda c: companies.append(c)),
         )
         print(f"{first_saved_search['name']}: all matched company domains")
