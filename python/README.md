@@ -7,7 +7,7 @@
 git clone https://github.com/harmonicai/consumer_api_sdk.git
 cd python
 pip3 install -r requirements.txt
-python3 demo.py
+python3 search_demo.py
 ```
 #### from pip package
 ```
