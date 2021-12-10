@@ -32,17 +32,19 @@ if __name__ == "__main__":
 
     if len(watchlists) > 0:
         watchlist_id = watchlists[-1]["id"]
-        print("\nadd company to watchlist")
-        companies = client.search(
-            "San Francisco machine learning sequoia",
-            include_results=True,
+
+        keywords = "San Francisco machine learning sequoia"
+        print(f"\nsearch new companies with keywords: {keywords}")
+        company_ids = client.search(
+            keywords,
+            include_results=False,
             page=0,
             page_size=10,
         )["results"]
-        client.add_company_to_watchlist(watchlist_id, companies, isURN=True)
-        print("\nupdate watchlist")
+        client.add_company_to_watchlist(watchlist_id, company_ids, isURN=True)
+        print("\nupdate watchlist with new search result")
         client.set_watchlist(watchlist_id, name="sdk demo watchlist")
         watchlist = client.get_watchlist_by_id(watchlist_id)
-        print(f"\n{watchlist['name']}:")
-        for company in watchlist["companies"]:
+        print(f"\nfirst 10 items in {watchlist['name']}:")
+        for company in watchlist["companies"][:10]:
             print(company_summary(company))

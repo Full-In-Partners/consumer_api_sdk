@@ -185,20 +185,23 @@ class HarmonicClient:
                 f"COMPLETE: search {saved_search_id} generated {total_result_count} results"
             )
 
-    def search(self, keywords_or_query, include_results=True, page=0, page_size=50):
+    def search(self, keywords_or_query, page=0, page_size=50, include_results=True):
         """[Conduct a search **POST**](https://console.harmonic.ai/docs/api-reference/discover#conduct-a-search)"""
         # search by keywords or api_query
-        API_URL = f"{self.API_ENDPOINT}/search/companies"
+        SEARCH_BY_QUERY_API_URL = f"{self.API_ENDPOINT}/search/companies"
+        SEARCH_BY_KEYWORDS_API_URL = f"{self.API_ENDPOINT}/search/companies_by_keywords"
+        API_URL = None
         body = {
             "type": "COMPANIES_LIST",
-            "include_count": True,
-            "include_results": include_results,
-            "page": page,
-            "page_size": page_size,
         }
         if isinstance(keywords_or_query, str):
+            API_URL = SEARCH_BY_KEYWORDS_API_URL
             body["keywords"] = keywords_or_query
+            body["include_ids_only"] = not include_results
+            body["page"] = page
+            body["page_size"] = page_size
         elif isinstance(keywords_or_query, dict):
+            API_URL = SEARCH_BY_QUERY_API_URL
             if not keywords_or_query.get("pagination"):
                 keywords_or_query["pagination"] = {}
             keywords_or_query["pagination"]["start"] = page * page_size
@@ -206,7 +209,6 @@ class HarmonicClient:
             body["query"] = keywords_or_query
         else:
             raise ValueError("Search input has to be keywords(str) or query(dict)")
-
         company = requests.post(
             API_URL,
             params={"apikey": self.API_KEY},
@@ -235,7 +237,7 @@ class HarmonicClient:
         person = requests.get(API_URL, params={"apikey": self.API_KEY}).json()
         return person
 
-    def get_persons_by_id(self, ids, isURN=False):
+    def get_persons_by_ids(self, ids, isURN=False):
         """[Get persons by ID **GET](https://console.harmonic.ai/docs/api-reference/fetch#get-persons-by-id)"""
         API_URL = f"{self.API_ENDPOINT}/persons"
         persons = requests.get(

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     keywords = "San Francisco machine learning sequoia"
     keyword_serach_res = client.search(
         keywords,
-        include_results=True,
+        include_results=False,  # only get companies ids and fetch company data later
         page=0,
         page_size=10,
     )
@@ -61,20 +61,18 @@ if __name__ == "__main__":
     if len(saved_searches) > 0:
         first_saved_search = saved_searches[0]
         # option 1:
-        print("\n--- search with saved search query (first page) ---")
+        print("\n--- search with saved search query (only first page demo below) ---")
         saved_searches_res1 = client.search(
             first_saved_search["query"], include_results=True, page=0, page_size=50
         )
-        companies = client.get_companies_by_ids(
-            saved_searches_res1["results"], isURN=True
-        )
+        companies = saved_searches_res1["results"]
         print(f"{first_saved_search['name']}: first page matched company domains")
         print(f"{[company['website']['domain'] for company in companies]}")
         # option 2:
         print("\n--- search with saved search id (streaming all) ---")
         companies = []
         saved_searches_res2 = client.get_saved_search_results(
-            first_saved_search["entity_urn"],
+            save_search_id=first_saved_search["entity_urn"],
             record_processor=(lambda c: companies.append(c)),
         )
         print(f"{first_saved_search['name']}: all matched company domains")
