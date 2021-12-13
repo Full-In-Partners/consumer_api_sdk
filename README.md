@@ -38,5 +38,8 @@ for url in [
     client.enrich_company(url)
 ```
 * [Watchlist Demo](python/watchlist_demo.py) 
-
-
+```
+# add companies with id 1 and 4 to my first watchlist
+first_watchlist_id = client.get_watchlists()[0]['id']
+client.add_company_to_watchlist(first_watchlist_id, [1, 4])
+```
