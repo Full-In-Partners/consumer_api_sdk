@@ -36,6 +36,7 @@ keyword_serach_res = client.search(
     page_size=10,
 )
 ```
+```
 # stream companies in my first saved search
 first_saved_search = client.get_saved_searches_by_owner()[0]
 companies = []
