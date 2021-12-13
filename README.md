@@ -19,7 +19,7 @@ Checkout below demos for advanced usage
 ```
 # search by keywords
 keywords = "San Francisco machine learning sequoia"
-keyword_serach_res = client.search(
+serach_res = client.search(
     keywords,
     include_results=True,
     page=0,
@@ -29,7 +29,7 @@ keyword_serach_res = client.search(
 ```
 # search by saved search (saved from https://console.harmonic.ai)
 first_saved_search = client.get_saved_searches_by_owner()[0]
-keyword_serach_res = client.search(
+serach_res = client.search(
     first_saved_search["query"],
     include_results=True,
     page=0,
