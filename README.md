@@ -28,7 +28,6 @@ keyword_serach_res = client.search(
 ```
 ```
 # search by saved search (saved from https://console.harmonic.ai)
-```
 first_saved_search = client.get_saved_searches_by_owner()[0]
 keyword_serach_res = client.search(
     first_saved_search["query"],
