@@ -17,12 +17,32 @@ print(companies)
 Checkout below demos for advanced usage
 * [Search Demo](python/search_demo.py) 
 ```
+# search by keywords
 keywords = "San Francisco machine learning sequoia"
 keyword_serach_res = client.search(
     keywords,
     include_results=True,
     page=0,
     page_size=10,
+)
+```
+```
+# search by saved search (saved from https://console.harmonic.ai)
+```
+first_saved_search = client.get_saved_searches_by_owner()[0]
+keyword_serach_res = client.search(
+    first_saved_search["query"],
+    include_results=True,
+    page=0,
+    page_size=10,
+)
+```
+# stream companies in my first saved search
+first_saved_search = client.get_saved_searches_by_owner()[0]
+companies = []
+client.get_saved_search_results(
+    first_saved_search["entity_urn"],
+    record_processor=(lambda c: companies.append(c)),
 )
 ```
 * [Enrichment Demo](python/enrichment_demo.py)
