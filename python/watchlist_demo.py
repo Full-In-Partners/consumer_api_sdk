@@ -33,7 +33,7 @@ if __name__ == "__main__":
     if len(watchlists) > 0:
         watchlist_id = watchlists[-1]["id"]
 
-        keywords = "San Francisco machine learning sequoia"
+        keywords = "San Francisco, machine learning, sequoia"
         print(f"\nsearch new companies with keywords: {keywords}")
         company_ids = client.search(
             keywords,

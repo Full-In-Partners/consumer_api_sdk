@@ -17,8 +17,8 @@ print(companies)
 Checkout below demos for advanced usage
 * [Search Demo](python/search_demo.py) 
 ```
-# search by keywords
-keywords = "San Francisco machine learning sequoia"
+# search by keywords, group keywords with ','
+keywords = "San Francisco, machine learning, sequoia"
 serach_res = client.search(
     keywords,
     include_results=True,

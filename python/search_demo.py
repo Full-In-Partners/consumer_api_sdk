@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # search companies with keywords
     print("----- KEWORDS SEARCH -----")
-    keywords = "San Francisco machine learning sequoia"
+    keywords = "San Francisco, machine learning, sequoia"
     keyword_serach_res = client.search(
         keywords,
         include_results=False,  # only get companies ids and fetch company data later
