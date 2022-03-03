@@ -191,7 +191,7 @@ class HarmonicClient:
         """[Conduct a search **POST**](https://console.harmonic.ai/docs/api-reference/discover#conduct-a-search)"""
         # search by keywords or api_query
         SEARCH_BY_QUERY_API_URL = f"{self.API_ENDPOINT}/search/companies"
-        SEARCH_BY_KEYWORDS_API_URL = f"{self.API_ENDPOINT}/search/companies_by_keywords"
+        SEARCH_BY_KEYWORDS_API_URL = f"{self.API_ENDPOINT}/search/companies_by_keywords?page={page}&size={page_size}"
         API_URL = None
         body = {
             "type": "COMPANIES_LIST",
@@ -200,8 +200,6 @@ class HarmonicClient:
             API_URL = SEARCH_BY_KEYWORDS_API_URL
             body["keywords"] = keywords_or_query
             body["include_ids_only"] = not include_results
-            body["page"] = page
-            body["page_size"] = page_size
         elif isinstance(keywords_or_query, dict):
             API_URL = SEARCH_BY_QUERY_API_URL
             if not keywords_or_query.get("pagination"):
@@ -255,6 +253,7 @@ class HarmonicClient:
         watchlist_id,
         name=None,
         companies=None,
+        shared_with_team=None,
     ):
         """[Modify a Watchlist **PUT**](https://console.harmonic.ai/docs/api-reference/watchlist#modify-company-watchlist)"""
         API_URL = f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}"
@@ -262,11 +261,14 @@ class HarmonicClient:
         body = {
             "name": wl["name"],
             "companies": [c["entity_urn"] for c in wl["companies"]],
+            "shared_with_team": wl["shared_with_team"],
         }
         if name is not None and isinstance(name, str):
             body["name"] = name
         if companies is not None and isinstance(companies, list):
             body["companies"] = companies
+        if shared_with_team is not None and isinstance(shared_with_team, bool):
+            body["shared_with_team"] = shared_with_team
         res = self._request("put", API_URL, params={"apikey": self.API_KEY}, json=body)
         return res
 
