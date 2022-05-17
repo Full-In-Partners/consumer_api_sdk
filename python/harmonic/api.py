@@ -302,6 +302,19 @@ class HarmonicClient:
         )
         return res
 
+    def add_company_to_watchlist_by_urls(self, watchlist_id, company_urls):
+        """[Add Companies to Watchlist **POST**](https://console.harmonic.ai/docs/api-reference/watch#add-companies-to-watchlist-by-urls)"""
+        API_URL = (
+            f"{self.API_ENDPOINT}/watchlists/companies/{watchlist_id}:addCompaniesByUrls"
+        )
+        res = self._request(
+            "post",
+            API_URL,
+            params={"apikey": self.API_KEY},
+            json=company_urls,
+        )
+        return res
+
     def remove_company_from_watchlist(self, watchlist_id, company_ids, isURN=False):
         """[Remove Companies from Watchlist **POST**](https://console.harmonic.ai/docs/api-reference/watchlist#remove-companies-from-watchlist)"""
         API_URL = (

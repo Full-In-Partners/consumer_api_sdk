@@ -62,4 +62,5 @@ for url in [
 # add companies with id 1 and 4 to my first watchlist
 first_watchlist_id = client.get_watchlists()[0]['id']
 client.add_company_to_watchlist(first_watchlist_id, [1, 4])
+client.add_company_to_watchlist_by_urls(first_watchlist_id, ["microsoft.com","https://www.linkedin.com/company/meta"])
 ```
