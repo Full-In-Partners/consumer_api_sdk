@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Harmonic SDK",
-    version="0.0.3",
+    version="0.0.4",
     author="Ronald Yang",
     author_email="ronald@harmonic.ai",
     description="python SDK for Harmonic Consumer APIs",

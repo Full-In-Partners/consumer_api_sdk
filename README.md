@@ -56,6 +56,12 @@ for url in [
     "https://www.linkedin.com/company/amazon/",
 ]:
     client.enrich_company(url)
+for url in [
+    "https://twitter.com/elonmusk",
+    "https://www.linkedin.com/in/williamhgates/",
+    "https://www.crunchbase.com/person/jeff-bezos",
+]:
+    client.enrich_person(url)
 ```
 * [Watchlist Demo](python/watchlist_demo.py) 
 ```

@@ -115,6 +115,18 @@ class HarmonicClient:
 
         return company
 
+    def enrich_person(self, url):
+        """[Enrich a company **POST**](https://console.harmonic.ai/docs/api-reference/enrich#enrich-a-person)"""
+        params = {
+            "apikey": self.API_KEY,
+            "identifier": url,
+        }
+        API_URL = f"{self.API_ENDPOINT}/persons"
+        person = self._request("post", API_URL, params=params)
+
+        return person
+
+
     # [DISCOVER](https://console.harmonic.ai/docs/api-reference/discover#discover)
     def get_saved_searches(self):
         """[Get saved searches **GET**](https://console.harmonic.ai/docs/api-reference/discover#get-saved-searches)"""
