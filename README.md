@@ -47,6 +47,7 @@ client.get_saved_search_results(
 ```
 * [Enrichment Demo](python/enrichment_demo.py)
 ```
+# enrich companies that you would love to have (if not existing in Harmonic) or update to latest info
 for url in [
     "https://www.instagram.com/allbirds",
     "https://www.facebook.com/weareallbirds/",
@@ -56,6 +57,7 @@ for url in [
     "https://www.linkedin.com/company/amazon/",
 ]:
     client.enrich_company(url)
+# enrich people
 for url in [ # we currently support Twitter, Linkedin, Crunchbase url for person
     "https://twitter.com/elonmusk",
     "https://www.linkedin.com/in/williamhgates/",
