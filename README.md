@@ -17,7 +17,7 @@ print(companies)
 Checkout below demos for advanced usage
 * [Search Demo](python/search_demo.py) 
 ```
-# search by keywords, group keywords with ','
+# search by keywords, group keywords with comma as delimeter
 keywords = "San Francisco, machine learning, sequoia"
 serach_res = client.search(
     keywords,
@@ -56,7 +56,7 @@ for url in [
     "https://www.linkedin.com/company/amazon/",
 ]:
     client.enrich_company(url)
-for url in [
+for url in [ # we currently support Twitter, Linkedin, Crunchbase url for person
     "https://twitter.com/elonmusk",
     "https://www.linkedin.com/in/williamhgates/",
     "https://www.crunchbase.com/person/jeff-bezos",
